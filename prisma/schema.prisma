@@ -1,0 +1,296 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ─── ENUMS ──────────────────────────────────────────────────────────
+
+enum SiteStatus {
+  Active
+  Inactive
+}
+
+enum PlanType {
+  FullPayment
+  Installment
+}
+
+enum PlanStatus {
+  Active
+  Inactive
+}
+
+enum PlotStatus {
+  Available
+  Blocked
+  Booked
+  Registered
+  Sold
+  BlockedAdmin
+}
+
+enum PlotType {
+  Corner
+  RoadFacing
+  Regular
+  ParkFacing
+}
+
+enum LeadStage {
+  Lead
+  Contacted
+  SiteVisit
+  Negotiation
+  Booked
+  Lost
+}
+
+enum AgentStatus {
+  Active
+  Inactive
+}
+
+enum BookingStatus {
+  Confirmed
+  Cancelled
+}
+
+enum PaymentMode {
+  Cash
+  UPI
+  BankTransfer
+  Cheque
+}
+
+enum ReceiptStatus {
+  Approved
+  Pending
+  Rejected
+}
+
+enum InstallmentStatus {
+  Pending
+  Overdue
+  Paid
+}
+
+// ─── SITE ───────────────────────────────────────────────────────────
+
+model Site {
+  id           Int          @id @default(autoincrement())
+  code         String       @unique
+  name         String
+  status       SiteStatus   @default(Active)
+  address      String?      @db.VarChar(500)
+  city         String
+  state        String
+  pincode      String?      @db.VarChar(10)
+  area         Decimal      @db.Decimal(10, 4)
+  areaUnit     String       @default("Acres")
+  zoning       String
+  rera         String?      @db.VarChar(50)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  plots        Plot[]
+  paymentPlans PaymentPlan[]
+
+  @@index([status])
+}
+
+// ─── PAYMENT PLAN ───────────────────────────────────────────────────
+
+model PaymentPlan {
+  id        Int          @id @default(autoincrement())
+  name      String
+  type      PlanType
+  status    PlanStatus   @default(Active)
+  siteId    Int?
+  site      Site?        @relation(fields: [siteId], references: [id])
+  discount  Decimal      @db.Decimal(5, 2) @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  installments PlanInstallment[]
+  bookings     Booking[]
+
+  @@index([siteId])
+  @@index([status])
+}
+
+// ─── PLAN INSTALLMENT (template rows inside a plan) ────────────────
+
+model PlanInstallment {
+  id             Int         @id @default(autoincrement())
+  planId         Int
+  plan           PaymentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  name           String
+  paymentPercent Decimal     @db.Decimal(5, 2)
+  dueDays        Int
+  mandatory      Boolean     @default(true)
+  orderIndex     Int
+
+  @@index([planId])
+}
+
+// ─── PLOT ──────────────────────────────────────────────────────────
+
+model Plot {
+  id          Int        @id @default(autoincrement())
+  code        String
+  block       String
+  area        Decimal    @db.Decimal(10, 2)
+  areaUnit    String     @default("Sq.ft")
+  status      PlotStatus @default(Available)
+  facing      String
+  siteId      Int
+  site        Site       @relation(fields: [siteId], references: [id])
+  type        PlotType?
+  dimensions  String?    @db.VarChar(50)
+  ratePerSqft Decimal?   @db.Decimal(10, 2)
+  plcCharges  Decimal?   @db.Decimal(10, 2)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  bookings    Booking[]
+
+  @@unique([siteId, code])
+  @@index([status])
+  @@index([facing])
+  @@index([type])
+}
+
+// ─── CUSTOMER ──────────────────────────────────────────────────────
+
+model Customer {
+  id                 Int        @id @default(autoincrement())
+  code               String     @unique
+  name               String
+  mobile             String     @db.VarChar(15)
+  alternateMobile    String?    @db.VarChar(15)
+  email              String?    @db.VarChar(255)
+  dateOfBirth        DateTime?
+  occupation         String?
+  panNumber          String?    @db.VarChar(10)
+  aadhaarNumber      String?    @db.VarChar(12)
+  passportNo         String?
+  addressLine        String?    @db.VarChar(500)
+  city               String?
+  state              String?
+  pincode            String?    @db.VarChar(10)
+  coApplicantName    String?
+  coApplicantPan     String?    @db.VarChar(10)
+  coApplicantAadhaar String?    @db.VarChar(12)
+  leadSource         String?
+  leadStage          LeadStage  @default(Lead)
+  referredByAgentId  Int?
+  referredByAgent    Agent?     @relation("AgentReferredCustomers", fields: [referredByAgentId], references: [id])
+  interestedIn       String?
+  notesRemarks       String?    @db.Text
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  bookings           Booking[]
+
+  @@index([leadStage])
+  @@index([referredByAgentId])
+}
+
+// ─── AGENT ─────────────────────────────────────────────────────────
+
+model Agent {
+  id                Int         @id @default(autoincrement())
+  code              String      @unique
+  name              String
+  mobile            String      @db.VarChar(15)
+  email             String?     @db.VarChar(255)
+  pan               String?     @db.VarChar(10)
+  reraNo            String?
+  bankName          String?
+  accountNo         String?
+  ifscCode          String?
+  commission        Decimal     @db.Decimal(10, 2) @default(0)
+  status            AgentStatus @default(Active)
+  joined            DateTime    @default(now())
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  bookings          Booking[]
+  referredCustomers Customer[]  @relation("AgentReferredCustomers")
+
+  @@index([status])
+}
+
+// ─── BOOKING ───────────────────────────────────────────────────────
+
+model Booking {
+  id            Int            @id @default(autoincrement())
+  bookingNo     String         @unique
+  date          DateTime
+  plotId        Int
+  plot          Plot           @relation(fields: [plotId], references: [id])
+  customerId    Int
+  customer      Customer       @relation(fields: [customerId], references: [id])
+  agentId       Int?
+  agent         Agent?         @relation(fields: [agentId], references: [id])
+  paymentPlanId Int?
+  paymentPlan   PaymentPlan?   @relation(fields: [paymentPlanId], references: [id])
+  total         Decimal        @db.Decimal(12, 2)
+  advance       Decimal        @db.Decimal(12, 2) @default(0)
+  status        BookingStatus  @default(Confirmed)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  payments      Payment[]
+  installments  InstallmentSchedule[]
+
+  @@index([plotId])
+  @@index([customerId])
+  @@index([agentId])
+  @@index([date])
+  @@index([status])
+}
+
+// ─── PAYMENT (receipts / collections) ──────────────────────────────
+
+model Payment {
+  id         Int          @id @default(autoincrement())
+  receiptNo  String       @unique
+  date       DateTime     @default(now())
+  bookingId  Int
+  booking    Booking      @relation(fields: [bookingId], references: [id])
+  mode       PaymentMode
+  ref        String?      @db.VarChar(100)
+  amount     Decimal      @db.Decimal(12, 2)
+  postedBy   String?      @db.VarChar(100)
+  status     ReceiptStatus @default(Pending)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([bookingId])
+  @@index([date])
+  @@index([status])
+}
+
+// ─── INSTALLMENT SCHEDULE (per-booking payment schedule) ───────────
+
+model InstallmentSchedule {
+  id              Int               @id @default(autoincrement())
+  bookingId       Int
+  booking         Booking           @relation(fields: [bookingId], references: [id])
+  installmentName String
+  dueDate         DateTime
+  due             Decimal           @db.Decimal(12, 2)
+  paid            Decimal           @db.Decimal(12, 2) @default(0)
+  status          InstallmentStatus @default(Pending)
+  orderIndex      Int
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([bookingId])
+  @@index([dueDate])
+  @@index([status])
+}
