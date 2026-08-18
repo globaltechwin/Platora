@@ -22,7 +22,7 @@ export async function GET() {
       }),
     ]);
 
-    const siteNames = sites.map((s) => s.name);
+    const siteNames: string[] = sites.map((s: { name: string }) => s.name);
 
     const plotCounts = { total: 0, available: 0, blocked: 0, booked: 0, sold: 0 };
     for (const p of plots) {
@@ -37,36 +37,72 @@ export async function GET() {
       }
     }
 
-    const mappedBookings = bookings.map((b) => {
-      const advance = b.advance.toNumber();
-      const paymentSum = b.payments.reduce((sum, p) => sum + p.amount.toNumber(), 0);
-      const paid = advance + paymentSum;
-      const total = b.total.toNumber();
-      const balance = total - paid;
-
-      return {
-        id: b.id,
-        bookingNo: b.bookingNo,
-        date: b.date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }),
-        siteName: b.plot.site.name,
-        plotCode: b.plot.code,
-        customerName: b.customer.name,
-        mobile: b.customer.mobile,
-        total,
-        paid,
-        balance,
-        status: b.status,
-      };
-    });
-
-    const totalCollection = payments.reduce((sum, p) => sum + p.amount.toNumber(), 0);
-    const pendingCollection = bookings
-      .filter((b) => b.status === "Confirmed")
-      .reduce((sum, b) => {
+    const mappedBookings = bookings.map(
+      (b: {
+        id: number;
+        bookingNo: string;
+        date: Date;
+        total: { toNumber: () => number };
+        advance: { toNumber: () => number };
+        status: string;
+        plot: { code: string; site: { name: string } };
+        customer: { name: string; mobile: string };
+        payments: { amount: { toNumber: () => number } }[];
+      }) => {
         const advance = b.advance.toNumber();
-        const paymentSum = b.payments.reduce((s, p) => s + p.amount.toNumber(), 0);
-        return sum + (b.total.toNumber() - advance - paymentSum);
-      }, 0);
+        const paymentSum = b.payments.reduce(
+          (sum: number, p: { amount: { toNumber: () => number } }) =>
+            sum + p.amount.toNumber(),
+          0,
+        );
+        const paid = advance + paymentSum;
+        const total = b.total.toNumber();
+        const balance = total - paid;
+
+        return {
+          id: b.id,
+          bookingNo: b.bookingNo,
+          date: b.date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }),
+          siteName: b.plot.site.name,
+          plotCode: b.plot.code,
+          customerName: b.customer.name,
+          mobile: b.customer.mobile,
+          total,
+          paid,
+          balance,
+          status: b.status,
+        };
+      },
+    );
+
+    const totalCollection = payments.reduce(
+      (sum: number, p: { amount: { toNumber: () => number } }) =>
+        sum + p.amount.toNumber(),
+      0,
+    );
+    const pendingCollection = bookings
+      .filter(
+        (b: { status: string }) => b.status === "Confirmed",
+      )
+      .reduce(
+        (
+          sum: number,
+          b: {
+            total: { toNumber: () => number };
+            advance: { toNumber: () => number };
+            payments: { amount: { toNumber: () => number } }[];
+          },
+        ) => {
+          const advance = b.advance.toNumber();
+          const paymentSum = b.payments.reduce(
+            (s: number, p: { amount: { toNumber: () => number } }) =>
+              s + p.amount.toNumber(),
+            0,
+          );
+          return sum + (b.total.toNumber() - advance - paymentSum);
+        },
+        0,
+      );
 
     return NextResponse.json({
       siteNames,

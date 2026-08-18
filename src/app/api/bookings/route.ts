@@ -178,17 +178,26 @@ export async function POST(request: Request) {
           const bookingTotal = total;
 
           await prisma.installmentSchedule.createMany({
-            data: installments.map((inst, idx) => ({
-              bookingId: booking.id,
-              installmentName: inst.name,
-              dueDate: new Date(
-                bookingDate.getTime() + inst.dueDays * 24 * 60 * 60 * 1000,
-              ),
-              due: (bookingTotal * inst.paymentPercent.toNumber()) / 100,
-              paid: 0,
-              status: "Pending" as const,
-              orderIndex: idx,
-            })),
+            data: installments.map(
+              (
+                inst: {
+                  name: string;
+                  dueDays: number;
+                  paymentPercent: { toNumber: () => number };
+                },
+                idx: number,
+              ) => ({
+                bookingId: booking.id,
+                installmentName: inst.name,
+                dueDate: new Date(
+                  bookingDate.getTime() + inst.dueDays * 24 * 60 * 60 * 1000,
+                ),
+                due: (bookingTotal * inst.paymentPercent.toNumber()) / 100,
+                paid: 0,
+                status: "Pending" as const,
+                orderIndex: idx,
+              }),
+            ),
           });
         }
       }

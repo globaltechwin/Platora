@@ -26,36 +26,48 @@ export async function GET() {
       orderBy: { name: "asc" },
     });
 
-    const rows: AgentPerformanceRow[] = agents.map((agent) => {
-      let totalValue = 0;
-      let totalCommission = 0;
-      let totalApprovedPayments = 0;
+    const rows: AgentPerformanceRow[] = agents.map(
+      (agent: {
+        id: number;
+        code: string;
+        name: string;
+        commission: { toNumber: () => number };
+        bookings: {
+          total: { toNumber: () => number };
+          plot: { area: { toNumber: () => number } };
+          payments: { amount: { toNumber: () => number } }[];
+        }[];
+      }) => {
+        let totalValue = 0;
+        let totalCommission = 0;
+        let totalApprovedPayments = 0;
 
-      for (const booking of agent.bookings) {
-        const bookingTotal = booking.total.toNumber();
-        const plotArea = booking.plot.area.toNumber();
-        const agentCommissionRate = agent.commission.toNumber();
+        for (const booking of agent.bookings) {
+          const bookingTotal = booking.total.toNumber();
+          const plotArea = booking.plot.area.toNumber();
+          const agentCommissionRate = agent.commission.toNumber();
 
-        totalValue += bookingTotal;
-        totalCommission += plotArea > 0 ? (bookingTotal * agentCommissionRate) / plotArea : 0;
+          totalValue += bookingTotal;
+          totalCommission += plotArea > 0 ? (bookingTotal * agentCommissionRate) / plotArea : 0;
 
-        for (const payment of booking.payments) {
-          totalApprovedPayments += payment.amount.toNumber();
+          for (const payment of booking.payments) {
+            totalApprovedPayments += payment.amount.toNumber();
+          }
         }
-      }
 
-      const pendingCommission = totalCommission - totalApprovedPayments;
+        const pendingCommission = totalCommission - totalApprovedPayments;
 
-      return {
-        id: agent.id,
-        agentCode: agent.code,
-        agentName: agent.name,
-        bookings: agent.bookings.length,
-        value: totalValue,
-        commission: totalCommission,
-        pendingCommission,
-      };
-    });
+        return {
+          id: agent.id,
+          agentCode: agent.code,
+          agentName: agent.name,
+          bookings: agent.bookings.length,
+          value: totalValue,
+          commission: totalCommission,
+          pendingCommission,
+        };
+      },
+    );
 
     return NextResponse.json(rows);
   } catch (error) {

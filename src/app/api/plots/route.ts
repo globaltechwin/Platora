@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { toUIStatus, toDBType } from "@/lib/types/plot";
-import { PlotStatus, PlotType } from "@prisma/client";
 import type { Plot } from "@/lib/types/plot";
+import type { Prisma } from "@prisma/client";
+
+const PlotStatus = {
+  Available: "Available",
+} as const;
 
 function mapPlot(plot: {
   id: number;
@@ -109,10 +113,10 @@ export async function POST(request: Request) {
       block: string;
       area: number;
       areaUnit: string;
-      status: PlotStatus;
+      status: "Available";
       facing: string;
       siteId: number;
-      type: PlotType | null;
+      type: "Corner" | "RoadFacing" | "Regular" | "ParkFacing" | null;
       dimensions: string | null;
       ratePerSqft: number | null;
       plcCharges: number | null;
@@ -132,14 +136,14 @@ export async function POST(request: Request) {
         status: PlotStatus.Available,
         facing: facing || "North",
         siteId: siteRecord.id,
-        type: dbType as PlotType | null,
+        type: dbType as "Corner" | "RoadFacing" | "Regular" | "ParkFacing" | null,
         dimensions: dims,
         ratePerSqft: parseFloat(ratePerSqft) || null,
         plcCharges: parseFloat(plcCharges) || null,
       });
     }
 
-    const created = await prisma.$transaction(async (tx) => {
+    const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Check for existing codes within this site
       const existingCodes = await tx.plot.findMany({
         where: {
@@ -150,7 +154,7 @@ export async function POST(request: Request) {
       });
 
       if (existingCodes.length > 0) {
-        const duplicateList = existingCodes.map((e) => e.code).join(", ");
+        const duplicateList = existingCodes.map((e: { code: string }) => e.code).join(", ");
         throw new Error(
           `Plot code(s) already exist in site "${siteRecord.name}": ${duplicateList}`,
         );

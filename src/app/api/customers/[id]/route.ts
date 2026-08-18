@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { toLeadStage, toDBLeadStage } from "@/lib/types/customer";
-import { LeadStage } from "@prisma/client";
 import type { Customer } from "@/lib/types/customer";
 
 const agentInclude = { referredByAgent: { select: { name: true } } };
@@ -169,7 +168,7 @@ export async function PUT(
         coApplicantPan: coApplicantPan?.trim() || null,
         coApplicantAadhaar: coApplicantAadhaar?.trim() || null,
         leadSource: leadSource?.trim() || null,
-        leadStage: leadStage ? (toDBLeadStage(leadStage) as LeadStage) : undefined,
+        leadStage: leadStage ? toDBLeadStage(leadStage) as "Lead" | "Contacted" | "SiteVisit" | "Negotiation" | "Booked" | "Lost" : undefined,
         referredByAgentId: agentId,
         interestedIn: interestedIn?.trim() || null,
         notesRemarks: notesRemarks?.trim() || null,

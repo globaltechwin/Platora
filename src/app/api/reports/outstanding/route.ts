@@ -35,50 +35,67 @@ export async function GET() {
       orderBy: { dueDate: "asc" },
     });
 
-    const rows: OutstandingRow[] = schedules.map((s) => {
-      const due = s.due.toNumber();
-      const paid = s.paid.toNumber();
-      const balance = due - paid;
+    const rows: OutstandingRow[] = schedules.map(
+      (s: {
+        id: number;
+        due: { toNumber: () => number };
+        paid: { toNumber: () => number };
+        status: string;
+        dueDate: Date;
+        installmentName: string;
+        booking: {
+          bookingNo: string;
+          customer: { name: string; mobile: string };
+          plot: {
+            code: string;
+            site: { name: string };
+          };
+        };
+      }) => {
+        const due = s.due.toNumber();
+        const paid = s.paid.toNumber();
+        const balance = due - paid;
 
-      let overdueDays = 0;
-      if (balance > 0) {
-        const dueDate = new Date(s.dueDate);
-        dueDate.setHours(0, 0, 0, 0);
-        if (dueDate < today) {
-          overdueDays = Math.floor(
-            (today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24),
-          );
+        let overdueDays = 0;
+        if (balance > 0) {
+          const dueDate = new Date(s.dueDate);
+          dueDate.setHours(0, 0, 0, 0);
+          if (dueDate < today) {
+            overdueDays = Math.floor(
+              (today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24),
+            );
+          }
         }
-      }
 
-      let status: "Pending" | "Overdue" | "Paid" = s.status as "Pending" | "Overdue" | "Paid";
-      if (status === "Paid") {
-        // keep Paid
-      } else if (overdueDays > 0) {
-        status = "Overdue";
-      } else {
-        status = "Pending";
-      }
+        let status: "Pending" | "Overdue" | "Paid" = s.status as "Pending" | "Overdue" | "Paid";
+        if (status === "Paid") {
+          // keep Paid
+        } else if (overdueDays > 0) {
+          status = "Overdue";
+        } else {
+          status = "Pending";
+        }
 
-      return {
-        id: s.id,
-        bookingNo: s.booking.bookingNo,
-        customer: s.booking.customer.name,
-        mobile: s.booking.customer.mobile,
-        sitePlot: `${s.booking.plot.site.name} / ${s.booking.plot.code}`,
-        installment: s.installmentName,
-        dueDate: s.dueDate.toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        }),
-        due,
-        paid,
-        balance,
-        overdueDays,
-        status,
-      };
-    });
+        return {
+          id: s.id,
+          bookingNo: s.booking.bookingNo,
+          customer: s.booking.customer.name,
+          mobile: s.booking.customer.mobile,
+          sitePlot: `${s.booking.plot.site.name} / ${s.booking.plot.code}`,
+          installment: s.installmentName,
+          dueDate: s.dueDate.toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          }),
+          due,
+          paid,
+          balance,
+          overdueDays,
+          status,
+        };
+      },
+    );
 
     return NextResponse.json(rows);
   } catch (error) {

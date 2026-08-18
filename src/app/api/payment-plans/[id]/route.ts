@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { validatePlanInstallments } from "@/lib/db/validators";
 import type { PaymentPlan } from "@/lib/types/payment-plan";
+import type { Prisma } from "@prisma/client";
 
 function mapPlan(plan: {
   id: number;
@@ -130,7 +131,7 @@ export async function PUT(
       siteId = siteRecord.id;
     }
 
-    const plan = await prisma.$transaction(async (tx) => {
+    const plan = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const updated = await tx.paymentPlan.update({
         where: { id: planId },
         data: {

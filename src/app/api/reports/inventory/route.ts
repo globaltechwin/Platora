@@ -46,23 +46,36 @@ export async function GET() {
       orderBy: [{ siteId: "asc" }, { code: "asc" }],
     });
 
-    const rows: InventoryRow[] = plots.map((p) => {
-      const area = p.area.toNumber();
-      const rate = p.ratePerSqft?.toNumber() ?? 0;
-      return {
-        id: p.id,
-        site: p.site.name,
-        block: p.block,
-        plotNo: p.code,
-        type: p.type ?? "—",
-        facing: p.facing || "—",
-        area,
-        ratePerSqft: rate,
-        value: area * rate,
-        status: toInventoryStatus(p.status),
-        customerName: p.bookings[0]?.customer.name,
-      };
-    });
+    const rows: InventoryRow[] = plots.map(
+      (p: {
+        id: number;
+        status: string;
+        block: string;
+        code: string;
+        type: string | null;
+        facing: string;
+        area: { toNumber: () => number };
+        ratePerSqft: { toNumber: () => number } | null;
+        site: { name: string };
+        bookings: { customer: { name: string } }[];
+      }) => {
+        const area = p.area.toNumber();
+        const rate = p.ratePerSqft?.toNumber() ?? 0;
+        return {
+          id: p.id,
+          site: p.site.name,
+          block: p.block,
+          plotNo: p.code,
+          type: p.type ?? "—",
+          facing: p.facing || "—",
+          area,
+          ratePerSqft: rate,
+          value: area * rate,
+          status: toInventoryStatus(p.status),
+          customerName: p.bookings[0]?.customer.name,
+        };
+      },
+    );
 
     return NextResponse.json(rows);
   } catch (error) {

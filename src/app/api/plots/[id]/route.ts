@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { toUIStatus, toDBStatus, toDBType } from "@/lib/types/plot";
-import { PlotStatus, PlotType } from "@prisma/client";
 import type { Plot } from "@/lib/types/plot";
 
 function mapPlot(plot: {
@@ -157,10 +156,10 @@ export async function PUT(
         block: block?.trim() || existing.block,
         area: area != null ? parseFloat(area) : undefined,
         areaUnit: areaUnit?.trim() || undefined,
-        status: status ? (toDBStatus(status) as PlotStatus) : undefined,
+        status: status ? (toDBStatus(status) as "Available" | "Blocked" | "Booked" | "Registered" | "Sold" | "BlockedAdmin") : undefined,
         facing: facing?.trim() || undefined,
         siteId,
-        type: type != null ? (toDBType(type) as PlotType) : undefined,
+        type: type != null ? (toDBType(type) as "Corner" | "RoadFacing" | "Regular" | "ParkFacing") : undefined,
         dimensions: dimensions?.trim() || null,
         ratePerSqft: ratePerSqft != null ? parseFloat(ratePerSqft) : undefined,
         plcCharges: plcCharges != null ? parseFloat(plcCharges) : undefined,

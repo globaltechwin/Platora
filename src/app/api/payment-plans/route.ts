@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { validatePlanInstallments } from "@/lib/db/validators";
 import type { PaymentPlan } from "@/lib/types/payment-plan";
+import type { Prisma } from "@prisma/client";
 
 function mapPlan(plan: {
   id: number;
@@ -107,7 +108,7 @@ export async function POST(request: Request) {
       siteId = siteRecord.id;
     }
 
-    const plan = await prisma.$transaction(async (tx) => {
+    const plan = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const created = await tx.paymentPlan.create({
         data: {
           name: name.trim(),

@@ -1,5 +1,5 @@
 import { prisma } from ".";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 // ─── BOOKING NUMBER GENERATION ─────────────────────────────────────
 
@@ -121,7 +121,7 @@ export interface CreateBookingInput {
  * Returns the created booking or throws an error.
  */
 export async function createBookingWithValidation(input: CreateBookingInput) {
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     // Check for existing confirmed booking on this plot
     const existingConfirmed = await tx.booking.findFirst({
       where: {
@@ -191,7 +191,7 @@ export async function createBookingWithValidation(input: CreateBookingInput) {
 // ─── BOOKING CANCELLATION ──────────────────────────────────────────
 
 export async function cancelBooking(bookingId: number) {
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const booking = await tx.booking.findUniqueOrThrow({
       where: { id: bookingId },
       select: { id: true, plotId: true, status: true },
